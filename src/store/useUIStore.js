@@ -5,16 +5,17 @@ export const useUIStore = create((set, get) => ({
   inventoryOpen: false,
   dialogueOpen: false,
   menuOpen: false,
+  mapOpen: false,
   nearNPC: false,
 
   toggleInventory: () => {
     const opening = !get().inventoryOpen
     useAudioStore.getState().playSound(opening ? 'uiOpen' : 'uiClose')
-    set({ inventoryOpen: opening, dialogueOpen: false, menuOpen: false })
+    set({ inventoryOpen: opening, dialogueOpen: false, menuOpen: false, mapOpen: false })
   },
   openDialogue: () => {
     useAudioStore.getState().playSound('uiOpen')
-    set({ dialogueOpen: true, inventoryOpen: false, menuOpen: false })
+    set({ dialogueOpen: true, inventoryOpen: false, menuOpen: false, mapOpen: false })
   },
   closeDialogue: () => {
     if (get().dialogueOpen) useAudioStore.getState().playSound('uiClose')
@@ -23,10 +24,15 @@ export const useUIStore = create((set, get) => ({
   toggleMenu: () => {
     const opening = !get().menuOpen
     useAudioStore.getState().playSound(opening ? 'uiOpen' : 'uiClose')
-    set({ menuOpen: opening, inventoryOpen: false, dialogueOpen: false })
+    set({ menuOpen: opening, inventoryOpen: false, dialogueOpen: false, mapOpen: false })
   },
-  closeAll: () => set({ inventoryOpen: false, dialogueOpen: false, menuOpen: false }),
+  toggleMap: () => {
+    const opening = !get().mapOpen
+    useAudioStore.getState().playSound(opening ? 'uiOpen' : 'uiClose')
+    set({ mapOpen: opening, inventoryOpen: false, dialogueOpen: false, menuOpen: false })
+  },
+  closeAll: () => set({ inventoryOpen: false, dialogueOpen: false, menuOpen: false, mapOpen: false }),
   setNearNPC: (value) => set({ nearNPC: value }),
 
-  isBlockingInput: () => get().inventoryOpen || get().dialogueOpen || get().menuOpen,
+  isBlockingInput: () => get().inventoryOpen || get().dialogueOpen || get().menuOpen || get().mapOpen,
 }))

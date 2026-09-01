@@ -22,9 +22,24 @@ export const ITEMS = {
     id: 'sword',
     name: '낡은 검',
     type: 'weapon',
+    attackType: 'melee',
     damage: 15,
+    range: 2.2,
+    price: 40,
     description: '맨손보다 강한 근접 무기. 장착 시 공격력 증가.',
+  },
+  bow: {
+    id: 'bow',
+    name: '사냥꾼의 활',
+    type: 'weapon',
+    attackType: 'ranged',
+    damage: 12,
+    price: 60,
+    description: '화살을 쏘는 원거리 무기. 안전한 거리에서 싸울 수 있다.',
   },
 }
 
 export const UNARMED_DAMAGE = 8
+export const UNARMED_RANGE = 2.2
+
+export const SHOP_ITEM_IDS = ['sword', 'bow']

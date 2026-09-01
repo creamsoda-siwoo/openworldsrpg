@@ -3,6 +3,7 @@ import { useUIStore } from '../../store/useUIStore'
 import { useAudioStore } from '../../store/useAudioStore'
 import { useToastStore } from '../../store/useToastStore'
 import { saveGame, loadGame, clearSaveGame, hasSaveGame } from '../../utils/saveGame'
+import { useWorldProgressStore } from '../../store/useWorldProgressStore'
 
 const panelStyle = {
   position: 'absolute',
@@ -75,6 +76,15 @@ export default function SystemMenu() {
       </button>
       <button style={dangerButtonStyle} onClick={handleNewGame}>
         새 게임 (초기화)
+      </button>
+      <button
+        style={buttonStyle}
+        onClick={() => {
+          useWorldProgressStore.setState({ hasSeenIntro: false })
+          useUIStore.getState().closeAll()
+        }}
+      >
+        이야기 다시보기
       </button>
 
       <div style={{ marginTop: 16, paddingTop: 12, borderTop: '1px solid rgba(255,255,255,0.1)' }}>

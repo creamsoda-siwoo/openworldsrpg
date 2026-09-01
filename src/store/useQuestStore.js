@@ -43,6 +43,17 @@ export const useQuestStore = create((set, get) => ({
     })
   },
 
+  reportDiscover: (totalDiscovered) => {
+    const { active } = get()
+    Object.keys(active).forEach((questId) => {
+      const quest = findQuest(questId)
+      if (!quest || quest.type !== 'discover') return
+      const progress = Math.min(quest.targetCount, totalDiscovered)
+      set((s) => ({ active: { ...s.active, [questId]: progress } }))
+      if (progress >= quest.targetCount) get().completeQuest(questId)
+    })
+  },
+
   completeQuest: (questId) => {
     const quest = findQuest(questId)
     if (!quest) return

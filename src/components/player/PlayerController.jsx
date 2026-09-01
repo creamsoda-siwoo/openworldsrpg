@@ -1,4 +1,4 @@
-import { useRef, useEffect } from 'react'
+import { useRef, useEffect, useState } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { useSphere } from '@react-three/cannon'
 import * as THREE from 'three'
@@ -11,16 +11,19 @@ import { useInventoryStore } from '../../store/useInventoryStore'
 import { useMonsterRegistry } from '../../store/useMonsterRegistry'
 import { useAudioStore } from '../../store/useAudioStore'
 import { useToastStore } from '../../store/useToastStore'
+import { useWarpStore } from '../../store/useWarpStore'
+import { useWorldProgressStore } from '../../store/useWorldProgressStore'
+import { useProjectileStore } from '../../store/useProjectileStore'
 import { terrainHeightAt } from '../../utils/terrain'
-import { ITEMS, UNARMED_DAMAGE } from '../../data/items'
+import { ITEMS, UNARMED_DAMAGE, UNARMED_RANGE } from '../../data/items'
 
 const MOVE_SPEED = 5
 const JUMP_VELOCITY = 6
 const PLAYER_RADIUS = 0.5
 const GROUND_SNAP_TOLERANCE = 0.3
 
-const ATTACK_RANGE = 2.2
-const ATTACK_COOLDOWN = 0.5
+const MELEE_ATTACK_COOLDOWN = 0.5
+const RANGED_ATTACK_COOLDOWN = 0.7
 const ATTACK_STAMINA_COST = 15
 const STAMINA_REGEN_PER_SEC = 12
 
@@ -36,6 +39,10 @@ export default function PlayerController({ controlsRef, startPosition = DEFAULT_
   const attackCooldown = useRef(0)
   const isDead = useRef(false)
   const speedRef = useRef(0)
+  const [attackSignal, setAttackSignal] = useState(0)
+  const [equippedWeaponId, setEquippedWeaponId] = useState(useInventoryStore.getState().equippedWeaponId)
+
+  useEffect(() => useInventoryStore.subscribe((s) => setEquippedWeaponId(s.equippedWeaponId)), [])
 
   const [bodyRef, api] = useSphere(() => ({
     mass: 1,
@@ -56,27 +63,49 @@ export default function PlayerController({ controlsRef, startPosition = DEFAULT_
     }
   }, [api])
 
+  // Stable across re-renders (unlike a plain `const`) so the mousedown
+  // listener registered once below always reads the vector that the active
+  // useFrame callback is actually updating every frame, rather than a stale
+  // instance frozen at whatever render first captured it.
+  const camForward = useRef(new THREE.Vector3()).current
+  const camRight = useRef(new THREE.Vector3()).current
+  const moveDirection = useRef(new THREE.Vector3()).current
+  const previousTarget = useRef(new THREE.Vector3(...startPosition))
+
   const performAttack = () => {
     if (attackCooldown.current > 0) return
     if (!useStatsStore.getState().consumeStamina(ATTACK_STAMINA_COST)) return
-    attackCooldown.current = ATTACK_COOLDOWN
-    useAudioStore.getState().playSound('attack')
 
     const equippedId = useInventoryStore.getState().equippedWeaponId
-    const damage = equippedId && ITEMS[equippedId] ? ITEMS[equippedId].damage : UNARMED_DAMAGE
-    const [px, , pz] = position.current
+    const weapon = equippedId ? ITEMS[equippedId] : null
+    const isRanged = weapon?.attackType === 'ranged'
+    const damage = weapon ? weapon.damage : UNARMED_DAMAGE
 
-    // A plain radius check (no frontal-facing cone) - the player's model only
-    // turns to face its last movement direction, so once it stops next to a
-    // monster that approached from the side or behind, a facing-cone check
-    // would make melee whiff on an adjacent target for no visible reason.
-    const { monsters } = useMonsterRegistry.getState()
-    Object.values(monsters).forEach((monster) => {
-      const dx = monster.position[0] - px
-      const dz = monster.position[2] - pz
-      const dist = Math.hypot(dx, dz)
-      if (dist <= ATTACK_RANGE) monster.hit(damage)
-    })
+    attackCooldown.current = isRanged ? RANGED_ATTACK_COOLDOWN : MELEE_ATTACK_COOLDOWN
+    useAudioStore.getState().playSound('attack')
+    setAttackSignal((n) => n + 1)
+
+    const [px, py, pz] = position.current
+
+    if (isRanged) {
+      // Aim with the camera's current look direction and snap the character
+      // to face it, since arrows travel rather than hitting an area.
+      if (modelRef.current) modelRef.current.rotation.y = Math.atan2(camForward.x, camForward.z)
+      useProjectileStore.getState().spawnArrow([px, py + 0.9, pz], [camForward.x, camForward.z], damage)
+    } else {
+      const range = weapon?.range ?? UNARMED_RANGE
+      // A plain radius check (no frontal-facing cone) - the player's model
+      // only turns to face its last movement direction, so once it stops
+      // next to a monster that approached from the side or behind, a
+      // facing-cone check would make melee whiff for no visible reason.
+      const { monsters } = useMonsterRegistry.getState()
+      Object.values(monsters).forEach((monster) => {
+        const dx = monster.position[0] - px
+        const dz = monster.position[2] - pz
+        const dist = Math.hypot(dx, dz)
+        if (dist <= range) monster.hit(damage)
+      })
+    }
   }
 
   useEffect(() => {
@@ -89,16 +118,27 @@ export default function PlayerController({ controlsRef, startPosition = DEFAULT_
     return () => window.removeEventListener('mousedown', onMouseDown)
   }, [])
 
-  const camForward = new THREE.Vector3()
-  const camRight = new THREE.Vector3()
-  const moveDirection = new THREE.Vector3()
-  const previousTarget = useRef(new THREE.Vector3(...startPosition))
-
   useFrame((state, delta) => {
     if (attackCooldown.current > 0) attackCooldown.current -= delta
     useStatsStore.getState().regenStamina(STAMINA_REGEN_PER_SEC * delta)
 
-    const uiBlocking = useUIStore.getState().isBlockingInput()
+    const warpTarget = useWarpStore.getState().pendingWarpTarget
+    if (warpTarget) {
+      const [wx, wz] = warpTarget
+      const wy = terrainHeightAt(wx, wz) + PLAYER_RADIUS + 0.5
+      api.position.set(wx, wy, wz)
+      api.velocity.set(0, 0, 0)
+      // Update refs immediately so the rest of this frame (terrain-follow,
+      // camera translation) reacts to the new spot instead of lagging one
+      // frame behind the async physics subscription.
+      position.current = [wx, wy, wz]
+      velocity.current = [0, 0, 0]
+      useWarpStore.getState().clearWarpRequest()
+      useAudioStore.getState().playSound('uiClose')
+      useToastStore.getState().push('이동했습니다.')
+    }
+
+    const uiBlocking = useUIStore.getState().isBlockingInput() || !useWorldProgressStore.getState().hasSeenIntro
     const { forward, backward, left, right, jump } = uiBlocking ? {} : keys.current
 
     // Movement direction relative to camera facing
@@ -184,7 +224,12 @@ export default function PlayerController({ controlsRef, startPosition = DEFAULT_
   return (
     <group ref={bodyRef}>
       <group ref={modelRef}>
-        <PlayerModel speedRef={speedRef} groundOffset={-PLAYER_RADIUS} />
+        <PlayerModel
+          speedRef={speedRef}
+          groundOffset={-PLAYER_RADIUS}
+          equippedWeaponId={equippedWeaponId}
+          attackSignal={attackSignal}
+        />
       </group>
     </group>
   )

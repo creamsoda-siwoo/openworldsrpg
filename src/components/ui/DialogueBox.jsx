@@ -1,7 +1,11 @@
 import { useEffect, useState } from 'react'
 import { useUIStore } from '../../store/useUIStore'
 import { useQuestStore } from '../../store/useQuestStore'
+import { useInventoryStore } from '../../store/useInventoryStore'
+import { useToastStore } from '../../store/useToastStore'
 import { QUESTS } from '../../data/quests'
+import { NPC_GREETING } from '../../data/story'
+import { ITEMS, SHOP_ITEM_IDS } from '../../data/items'
 
 const panelStyle = {
   position: 'absolute',
@@ -13,6 +17,8 @@ const panelStyle = {
   borderRadius: 10,
   padding: 18,
   width: 400,
+  maxHeight: '60vh',
+  overflowY: 'auto',
   color: 'white',
   fontFamily: 'system-ui, sans-serif',
   pointerEvents: 'auto',
@@ -40,13 +46,21 @@ function questStatusLabel(questId, active, completed) {
 export default function DialogueBox() {
   const [open, setOpen] = useState(useUIStore.getState().dialogueOpen)
   const [questState, setQuestState] = useState(useQuestStore.getState())
+  const [inventory, setInventory] = useState(useInventoryStore.getState())
 
   useEffect(() => useUIStore.subscribe((s) => setOpen(s.dialogueOpen)), [])
   useEffect(() => useQuestStore.subscribe((s) => setQuestState(s)), [])
+  useEffect(() => useInventoryStore.subscribe((s) => setInventory(s)), [])
 
   if (!open) return null
 
   const { active, completed } = questState
+
+  const handleBuy = (itemId) => {
+    const item = ITEMS[itemId]
+    const ok = useInventoryStore.getState().buyItem(itemId)
+    useToastStore.getState().push(ok ? `${item.name}을(를) 구매했습니다.` : '골드가 부족합니다.')
+  }
 
   return (
     <div style={panelStyle}>
@@ -56,9 +70,11 @@ export default function DialogueBox() {
           닫기 (E)
         </button>
       </div>
-      <p style={{ fontSize: 13, opacity: 0.85, marginTop: 0 }}>
-        "여행자여, 이 근방엔 도움이 필요한 일들이 있다네. 도와줄 텐가?"
-      </p>
+      {NPC_GREETING.map((line, i) => (
+        <p key={i} style={{ fontSize: 13, opacity: 0.85, marginTop: 0 }}>
+          {line}
+        </p>
+      ))}
 
       {QUESTS.map((quest) => {
         const status = questStatusLabel(quest.id, active, completed)
@@ -87,6 +103,39 @@ export default function DialogueBox() {
           </div>
         )
       })}
+
+      <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid rgba(255,255,255,0.15)' }}>
+        <div style={{ fontWeight: 'bold', fontSize: 13, marginBottom: 4 }}>무기상점 (보유 골드: {inventory.gold})</div>
+        {SHOP_ITEM_IDS.map((itemId) => {
+          const item = ITEMS[itemId]
+          const owned = (inventory.items[itemId] || 0) > 0
+          return (
+            <div
+              key={itemId}
+              style={{
+                padding: '6px 0',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+              }}
+            >
+              <div>
+                <div style={{ fontSize: 13 }}>
+                  {item.name} <span style={{ opacity: 0.6, fontSize: 11 }}>({item.price} 골드)</span>
+                </div>
+                <div style={{ fontSize: 11, opacity: 0.7 }}>{item.description}</div>
+              </div>
+              <button
+                style={{ ...buttonStyle, background: owned ? '#555' : '#3b6bd6' }}
+                onClick={() => handleBuy(itemId)}
+                disabled={owned}
+              >
+                {owned ? '보유 중' : '구매'}
+              </button>
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
 }

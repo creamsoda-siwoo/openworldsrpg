@@ -3,6 +3,7 @@ import { useInventoryStore } from '../store/useInventoryStore'
 import { useQuestStore } from '../store/useQuestStore'
 import { useWorldProgressStore } from '../store/useWorldProgressStore'
 import { useWorldStore } from '../store/useWorldStore'
+import { useWarpStore } from '../store/useWarpStore'
 
 const SAVE_KEY = 'openworldrpg-save-v1'
 
@@ -12,9 +13,10 @@ export function saveGame() {
   const quest = useQuestStore.getState()
   const worldProgress = useWorldProgressStore.getState()
   const world = useWorldStore.getState()
+  const warp = useWarpStore.getState()
 
   const data = {
-    version: 1,
+    version: 2,
     savedAt: Date.now(),
     stats: {
       level: stats.level,
@@ -35,8 +37,12 @@ export function saveGame() {
       completed: quest.completed,
     },
     worldProgress: {
-      defeatedMonsterIds: worldProgress.defeatedMonsterIds,
+      monsterRespawnAt: worldProgress.monsterRespawnAt,
       collectedItemIds: worldProgress.collectedItemIds,
+      hasSeenIntro: worldProgress.hasSeenIntro,
+    },
+    warp: {
+      discoveredIds: warp.discoveredIds,
     },
     timeOfDay: world.timeOfDay,
   }
@@ -81,9 +87,13 @@ export function loadGame() {
   }
   if (data.worldProgress) {
     useWorldProgressStore.setState({
-      defeatedMonsterIds: data.worldProgress.defeatedMonsterIds ?? [],
+      monsterRespawnAt: data.worldProgress.monsterRespawnAt ?? {},
       collectedItemIds: data.worldProgress.collectedItemIds ?? [],
+      hasSeenIntro: data.worldProgress.hasSeenIntro ?? false,
     })
+  }
+  if (data.warp) {
+    useWarpStore.setState({ discoveredIds: data.warp.discoveredIds ?? ['village'] })
   }
   if (typeof data.timeOfDay === 'number') {
     useWorldStore.setState({ timeOfDay: data.timeOfDay })

@@ -4,8 +4,17 @@ import { useUIStore } from '../store/useUIStore'
 export default function useUIKeyboardShortcuts() {
   useEffect(() => {
     const onKeyDown = (event) => {
-      const { nearNPC, dialogueOpen, inventoryOpen, openDialogue, closeDialogue, toggleInventory, toggleMenu, closeAll } =
-        useUIStore.getState()
+      const {
+        nearNPC,
+        dialogueOpen,
+        inventoryOpen,
+        openDialogue,
+        closeDialogue,
+        toggleInventory,
+        toggleMenu,
+        toggleMap,
+        closeAll,
+      } = useUIStore.getState()
 
       if (event.code === 'KeyE') {
         if (dialogueOpen) closeDialogue()
@@ -14,6 +23,8 @@ export default function useUIKeyboardShortcuts() {
         toggleInventory()
       } else if (event.code === 'KeyP') {
         toggleMenu()
+      } else if (event.code === 'KeyM') {
+        toggleMap()
       } else if (event.code === 'Escape') {
         closeAll()
       }

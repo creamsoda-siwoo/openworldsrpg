@@ -30,6 +30,15 @@ export const useInventoryStore = create((set, get) => ({
 
   addGold: (amount) => set((s) => ({ gold: s.gold + amount })),
 
+  buyItem: (itemId) => {
+    const item = ITEMS[itemId]
+    if (!item || !item.price) return false
+    if (get().gold < item.price) return false
+    set((s) => ({ gold: s.gold - item.price }))
+    get().addItem(itemId, 1)
+    return true
+  },
+
   useItem: (itemId) => {
     const item = ITEMS[itemId]
     const qty = get().items[itemId] || 0

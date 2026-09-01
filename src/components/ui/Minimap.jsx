@@ -1,7 +1,9 @@
 import { useEffect, useRef } from 'react'
 import { usePlayerStore } from '../../store/usePlayerStore'
 import { useWorldStore } from '../../store/useWorldStore'
+import { useWarpStore } from '../../store/useWarpStore'
 import { SCENERY } from '../../utils/scenery'
+import { WARP_POINTS } from '../../utils/warpPoints'
 
 const CANVAS_SIZE = 180
 const CANVAS_HEIGHT = CANVAS_SIZE + 24
@@ -52,6 +54,12 @@ export default function Minimap() {
 
       SCENERY.trees.forEach((t) => drawDot(t.position[0], t.position[2], '#4caf6a', 2))
       SCENERY.rocks.forEach((r) => drawDot(r.position[0], r.position[2], '#a3a39c', 2))
+
+      const { discoveredIds } = useWarpStore.getState()
+      WARP_POINTS.forEach((p) => {
+        if (!discoveredIds.includes(p.id)) return
+        drawDot(p.position[0], p.position[2], '#7fd8ff', 3)
+      })
 
       ctx.restore()
 

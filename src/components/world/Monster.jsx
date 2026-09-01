@@ -20,6 +20,7 @@ const ATTACK_INTERVAL = 1.2
 const MAX_HEALTH = 30
 const BODY_HALF_HEIGHT = 0.35
 const EXP_REWARD = 15
+const RESPAWN_DELAY_MS = 60_000
 
 const STATE = { IDLE: 'idle', CHASE: 'chase', ATTACK: 'attack' }
 
@@ -31,10 +32,7 @@ export default function Monster({ id, spawnPosition }) {
   const idleTimer = useRef(0)
   const attackCooldown = useRef(0)
   const registryEntry = useRef(null)
-  const [isDead, setIsDead] = useState(() => useWorldProgressStore.getState().isMonsterDefeated(id))
-  // A save can load with this monster already marked defeated; only a fresh
-  // kill during this session should grant rewards again.
-  const alreadyDeadOnLoad = useRef(isDead)
+  const [isDead, setIsDead] = useState(() => !useWorldProgressStore.getState().isMonsterAlive(id))
 
   useEffect(() => {
     if (isDead) return undefined
@@ -44,30 +42,35 @@ export default function Monster({ id, spawnPosition }) {
         if (health.current <= 0) return
         health.current -= damage
         useAudioStore.getState().playSound('hit')
-        if (health.current <= 0) setIsDead(true)
+        if (health.current <= 0) {
+          useWorldProgressStore.getState().markMonsterDefeated(id, RESPAWN_DELAY_MS)
+          useQuestStore.getState().reportDefeat('slime')
+          useStatsStore.getState().gainExp(EXP_REWARD)
+          useInventoryStore.getState().addItem('slimeGel', 1)
+          useAudioStore.getState().playSound('monsterDeath')
+          useToastStore.getState().push(`슬라임을 처치했습니다 (+${EXP_REWARD} EXP)`)
+          setIsDead(true)
+        }
       },
     }
     registryEntry.current = entry
     registerMonster(id, entry)
     return () => unregisterMonster(id)
-    // isDead intentionally excluded: this effect only needs to (re-)run when
-    // registration inputs change, not every time death flips it away.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id, spawnPosition])
-
-  useEffect(() => {
-    if (!isDead || alreadyDeadOnLoad.current) return
-    useWorldProgressStore.getState().markMonsterDefeated(id)
-    useQuestStore.getState().reportDefeat('slime')
-    useStatsStore.getState().gainExp(EXP_REWARD)
-    useInventoryStore.getState().addItem('slimeGel', 1)
-    useAudioStore.getState().playSound('monsterDeath')
-    useToastStore.getState().push(`슬라임을 처치했습니다 (+${EXP_REWARD} EXP)`)
-    unregisterMonster(id)
-  }, [isDead, id])
+  }, [id, spawnPosition, isDead])
 
   useFrame((_, delta) => {
-    if (isDead || !groupRef.current) return
+    if (isDead) {
+      const respawnAt = useWorldProgressStore.getState().monsterRespawnAt[id]
+      if (respawnAt && Date.now() >= respawnAt) {
+        health.current = MAX_HEALTH
+        state.current = STATE.IDLE
+        wanderTarget.current = [spawnPosition[0], spawnPosition[2]]
+        setIsDead(false)
+      }
+      return
+    }
+
+    if (!groupRef.current) return
 
     const pos = groupRef.current.position
     const { position: playerPos } = usePlayerStore.getState()
