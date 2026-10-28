@@ -6,6 +6,7 @@ import { useAudioStore } from '../../store/useAudioStore'
 import { WARP_POINTS, VILLAGE_WARP_ID } from '../../utils/warpPoints'
 import { TERRAIN_SIZE } from '../../utils/terrain'
 import { NPC_POSITION } from '../world/NPC'
+import { VILLAGE_CENTER, VILLAGE_FENCE_RADIUS } from '../../utils/villageLayout'
 
 const MAP_SIZE = 460
 const WORLD_HALF = TERRAIN_SIZE / 2
@@ -40,6 +41,16 @@ export default function WorldMap() {
       ctx.strokeStyle = 'rgba(255,255,255,0.3)'
       ctx.lineWidth = 2
       ctx.strokeRect(3, 3, MAP_SIZE - 6, MAP_SIZE - 6)
+
+      const villageMapPos = worldToMap(VILLAGE_CENTER[0], VILLAGE_CENTER[1])
+      const villageMapRadius = (VILLAGE_FENCE_RADIUS / WORLD_HALF) * (MAP_SIZE / 2 - MAP_MARGIN)
+      ctx.beginPath()
+      ctx.arc(villageMapPos.x, villageMapPos.y, villageMapRadius, 0, Math.PI * 2)
+      ctx.fillStyle = 'rgba(244, 197, 66, 0.12)'
+      ctx.fill()
+      ctx.strokeStyle = 'rgba(244, 197, 66, 0.6)'
+      ctx.lineWidth = 1.5
+      ctx.stroke()
 
       const npc = worldToMap(NPC_POSITION[0], NPC_POSITION[2])
       ctx.beginPath()

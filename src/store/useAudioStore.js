@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { SOUNDS, MUSIC } from '../audio/sounds'
+import { playSynth } from '../audio/synth'
 
 const STORAGE_KEY = 'openworldrpg-audio-settings'
 const DEFAULT_SETTINGS = { volume: 0.6, muted: false }
@@ -23,6 +24,9 @@ function persistSettings(volume, muted) {
 }
 
 let bgmAudio = null
+// Keys whose file failed to load once - skip straight to the synth after that
+// instead of re-requesting a file we know isn't there.
+const missingSounds = new Set()
 
 function applyBgmVolume(volume, muted) {
   if (bgmAudio) bgmAudio.volume = muted ? 0 : volume * 0.5
@@ -33,15 +37,27 @@ export const useAudioStore = create((set, get) => ({
 
   playSound: (key) => {
     const { muted, volume } = get()
+    if (muted) return
     const src = SOUNDS[key]
-    if (muted || !src) return
+    if (!src || missingSounds.has(key)) {
+      playSynth(key, volume)
+      return
+    }
     try {
       const audio = new Audio(src)
       audio.volume = volume
-      audio.addEventListener('error', () => {}, { once: true })
+      audio.addEventListener(
+        'error',
+        () => {
+          missingSounds.add(key)
+          playSynth(key, volume)
+        },
+        { once: true },
+      )
       audio.play().catch(() => {})
     } catch {
-      // missing file or unsupported format - silently skip
+      missingSounds.add(key)
+      playSynth(key, volume)
     }
   },
 

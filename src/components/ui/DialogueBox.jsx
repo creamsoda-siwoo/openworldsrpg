@@ -65,7 +65,7 @@ export default function DialogueBox() {
   return (
     <div style={panelStyle}>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-        <h3 style={{ margin: 0 }}>떠돌이 상인</h3>
+        <h3 style={{ margin: 0 }}>마을 상인</h3>
         <button style={buttonStyle} onClick={() => useUIStore.getState().closeDialogue()}>
           닫기 (E)
         </button>

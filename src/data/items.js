@@ -18,6 +18,12 @@ export const ITEMS = {
     type: 'material',
     description: '슬라임을 처치하면 얻는다.',
   },
+  goblinFang: {
+    id: 'goblinFang',
+    name: '고블린의 송곳니',
+    type: 'material',
+    description: '고블린을 처치하면 얻는다.',
+  },
   sword: {
     id: 'sword',
     name: '낡은 검',

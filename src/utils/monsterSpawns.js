@@ -1,9 +1,10 @@
 import { mulberry32 } from './noise'
-import { terrainHeightAt, SPAWN_FLAT_RADIUS } from './terrain'
+import { terrainHeightAt } from './terrain'
+import { VILLAGE_SAFE_RADIUS } from './villageLayout'
 
 const SEED = 4242
 const COUNT = 14
-const MIN_RADIUS = SPAWN_FLAT_RADIUS - 6
+const MIN_RADIUS = VILLAGE_SAFE_RADIUS
 const MAX_RADIUS = 95
 const MIN_SEPARATION = 7
 

@@ -1,6 +1,13 @@
 import { useMemo } from 'react'
 import * as THREE from 'three'
+import { useHeightfield } from '@react-three/cannon'
 import { terrainHeightAt, TERRAIN_SIZE, TERRAIN_SEGMENTS } from '../../utils/terrain'
+import {
+  HEIGHTFIELD_DATA,
+  HEIGHTFIELD_ELEMENT_SIZE,
+  HEIGHTFIELD_POSITION,
+  HEIGHTFIELD_ROTATION,
+} from '../../utils/terrainHeightfield'
 
 const GRASS = new THREE.Color('#4a8f4f')
 const DIRT = new THREE.Color('#8a6d4b')
@@ -38,12 +45,30 @@ function buildTerrainGeometry() {
   return geometry
 }
 
+// Invisible physics-only collider - kept separate from the visual mesh above
+// because the mesh's own transform is identity (its slope is baked into
+// vertex positions), while the heightfield body needs its own position and
+// rotation to line up with the world.
+function TerrainCollider() {
+  const [ref] = useHeightfield(() => ({
+    type: 'Static',
+    args: [HEIGHTFIELD_DATA, { elementSize: HEIGHTFIELD_ELEMENT_SIZE }],
+    position: HEIGHTFIELD_POSITION,
+    rotation: HEIGHTFIELD_ROTATION,
+    material: 'ground',
+  }))
+  return <group ref={ref} />
+}
+
 export default function Terrain() {
   const geometry = useMemo(() => buildTerrainGeometry(), [])
 
   return (
-    <mesh geometry={geometry} receiveShadow castShadow>
-      <meshStandardMaterial vertexColors roughness={1} />
-    </mesh>
+    <>
+      <mesh geometry={geometry} receiveShadow castShadow>
+        <meshStandardMaterial vertexColors roughness={1} />
+      </mesh>
+      <TerrainCollider />
+    </>
   )
 }

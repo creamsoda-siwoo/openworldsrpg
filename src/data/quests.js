@@ -25,4 +25,13 @@ export const QUESTS = [
     targetCount: 3,
     reward: { exp: 80, gold: 50, itemId: 'sword' },
   },
+  {
+    id: 'goblin_hunt',
+    title: '고블린 소탕',
+    description: '들판 외곽을 배회하는 고블린 3마리를 처치하세요.',
+    type: 'defeat',
+    monsterType: 'goblin',
+    targetCount: 3,
+    reward: { exp: 160, gold: 100 },
+  },
 ]

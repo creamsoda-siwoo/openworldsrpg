@@ -9,9 +9,9 @@ import BowMesh from './BowMesh'
 
 const MODEL_URL = '/models/CesiumMan.glb'
 const TARGET_HEIGHT = 1.6
-// CesiumMan's rest pose faces this way by default - rotate the whole rig so
-// it matches our world convention (heading 0 = facing +Z).
-const FACING_OFFSET = Math.PI
+// CesiumMan already faces +Z once its Z_UP root node is applied, which
+// matches our world convention (heading 0 = facing +Z), so no extra turn.
+const FACING_OFFSET = 0
 
 const ATTACK_SWING_DURATION = 0.32
 
@@ -21,7 +21,7 @@ const ATTACK_SWING_DURATION = 0.32
 // the character's side (same rotated frame as the body) instead of tracking
 // the actual hand bone, so they always read clearly regardless of the arm's
 // current pose.
-const WEAPON_ANCHOR = [0.34, 1.05, 0.06]
+const WEAPON_ANCHOR = [-0.34, 1.05, 0.06]
 
 export default function HumanCharacter({ speedRef, walkSpeedReference = 2.5, equippedWeaponId, attackSignal }) {
   const { scene, animations } = useGLTF(MODEL_URL)

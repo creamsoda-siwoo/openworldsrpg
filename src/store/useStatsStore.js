@@ -1,6 +1,11 @@
 import { create } from 'zustand'
 import { useAudioStore } from './useAudioStore'
 import { useToastStore } from './useToastStore'
+import { useCombatFxStore } from './useCombatFxStore'
+
+// Stamina refunded when a dodge roll's invulnerability window swallows an
+// incoming attack - rewards timing the roll rather than spamming it.
+const PERFECT_DODGE_STAMINA_REFUND = 15
 
 function expToNextLevel(level) {
   return 50 + level * 25
@@ -21,8 +26,15 @@ export const useStatsStore = create((set, get) => ({
 
   takeDamage: (amount) => {
     if (amount <= 0) return
+    const fx = useCombatFxStore.getState()
+    if (fx.isInvulnerable()) {
+      fx.notifyPerfectDodge()
+      set((s) => ({ stamina: Math.min(s.maxStamina, s.stamina + PERFECT_DODGE_STAMINA_REFUND) }))
+      return
+    }
     useAudioStore.getState().playSound('damage')
     set((s) => ({ health: Math.max(0, s.health - amount) }))
+    fx.notifyPlayerHurt(amount)
   },
 
   heal: (amount) => {

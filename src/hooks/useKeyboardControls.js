@@ -10,6 +10,8 @@ const KEY_MAP = {
   KeyD: 'right',
   ArrowRight: 'right',
   Space: 'jump',
+  ShiftLeft: 'dodge',
+  ShiftRight: 'dodge',
 }
 
 export default function useKeyboardControls() {
@@ -19,6 +21,7 @@ export default function useKeyboardControls() {
     left: false,
     right: false,
     jump: false,
+    dodge: false,
   })
 
   useEffect(() => {
@@ -30,12 +33,19 @@ export default function useKeyboardControls() {
 
     const onKeyDown = handleKey(true)
     const onKeyUp = handleKey(false)
+    // Alt-tabbing away swallows the keyup, which would leave the character
+    // running on its own when focus comes back.
+    const onBlur = () => {
+      Object.keys(keys.current).forEach((action) => (keys.current[action] = false))
+    }
 
     window.addEventListener('keydown', onKeyDown)
     window.addEventListener('keyup', onKeyUp)
+    window.addEventListener('blur', onBlur)
     return () => {
       window.removeEventListener('keydown', onKeyDown)
       window.removeEventListener('keyup', onKeyUp)
+      window.removeEventListener('blur', onBlur)
     }
   }, [])
 

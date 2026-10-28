@@ -1,7 +1,9 @@
 # Audio assets
 
 Drop files with these exact names in this folder to enable sound - no code
-changes needed, `src/audio/sounds.js` already points here.
+changes needed, `src/audio/sounds.js` already points here. Any effect without
+a file falls back to a synthesized sound (`src/audio/synth.js`), so the game
+is never silent; a real file always takes priority.
 
 Sound effects (short one-shot clips):
 - attack.mp3 - player melee swing
